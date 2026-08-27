@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Atomic Orbital Simulator - Distance Scaled Shells</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <div id="fps-stats">
+            <div>FPS: <span id="fps-val">0</span></div>
+            <div>Gen Time: <span id="gen-time-val">0.00 ms</span></div>
+        </div>
+
+        <div id="radial-graph-card">
+            <h3>Radial Probability <span>P(r) = r²R²</span></h3>
+            <canvas id="radial-canvas" width="280" height="90"></canvas>
+            <div style="font-size: 0.7rem; color: #8b949e; display: flex; justify-content: space-between;">
+                <span>Nucleus (r=0)</span>
+                <span>Peak: <strong id="r-peak-val" style="color: #7ee787;">0.00 a₀</strong></span>
+                <span>Tail</span>
+            </div>
+        </div>
+
+        <div id="label-pos-x" class="axis-label label-pos-x">+X</div>
+        <div id="label-neg-x" class="axis-label label-neg-x">-X</div>
+        <div id="label-pos-y" class="axis-label label-pos-y">+Y</div>
+        <div id="label-neg-y" class="axis-label label-neg-y">-Y</div>
+        <div id="label-pos-z" class="axis-label label-pos-z">+Z</div>
+        <div id="label-neg-z" class="axis-label label-neg-z">-Z</div>
+    </div>
+
+    <div id="controls-wrapper" class="collapsed">
+        <button id="controls-toggle" title="Toggle Educational Controls">⚙️</button>
+        <div id="controls">
+            <h1>Quantum Mechanics Lab</h1>
+
+            <!-- Preset Selector -->
+            <div class="control-group">
+                <label>Curriculum Presets</label>
+                <div class="custom-select-wrapper" id="preset-custom-select">
+                    <div class="custom-select-trigger"><span>Custom Configuration</span></div>
+                    <div class="custom-options-container">
+                        <div class="custom-option selected" data-value="custom">Custom Configuration</div>
+                        <div class="custom-option" data-value="1s">1s Ground State</div>
+                        <div class="custom-option" data-value="2pz">2p<sub>z</sub> Dipole Lobe</div>
+                        <div class="custom-option" data-value="3d_z2">3d<sub>z²</sub> Hybrid Quadrupole</div>
+                        <div class="custom-option" data-value="3d_xy">3d<sub>xy</sub> Planar Cloverleaf</div>
+                        <div class="custom-option" data-value="4f_0">4f<sub>z³</sub> Complex Octupole</div>
+                        <div class="custom-option" data-value="3s">3s Multi-Radial Shells</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Principal Quantum Number -->
+            <div class="control-group">
+                <label>Principal Shell (n) <span class="val" id="n-val">1</span></label>
+                <div class="custom-select-wrapper" id="n-custom-select">
+                    <div class="custom-select-trigger"><span>1 (K Shell - n=1)</span></div>
+                    <div class="custom-options-container">
+                        <div class="custom-option selected" data-value="1">1 (K Shell - n=1)</div>
+                        <div class="custom-option" data-value="2">2 (L Shell - n=2)</div>
+                        <div class="custom-option" data-value="3">3 (M Shell - n=3)</div>
+                        <div class="custom-option" data-value="4">4 (N Shell - n=4)</div>
+                        <div class="custom-option" data-value="5">5 (O Shell - n=5)</div>
+                        <div class="custom-option" data-value="6">6 (P Shell - n=6)</div>
+                        <div class="custom-option" data-value="7">7 (Q Shell - n=7)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Azimuthal Subshell -->
+            <div class="control-group">
+                <label>Azimuthal Subshell (l) <span class="val" id="l-val">0 (s)</span></label>
+                <div class="custom-select-wrapper" id="l-custom-select">
+                    <div class="custom-select-trigger"><span>0 (s)</span></div>
+                    <div class="custom-options-container" id="l-custom-options"></div>
+                </div>
+            </div>
+
+            <!-- Magnetic Orientation -->
+            <div class="control-group">
+                <label>Magnetic Orientation (m_l) <span class="val" id="m-val">0</span></label>
+                <div class="custom-select-wrapper" id="m-custom-select">
+                    <div class="custom-select-trigger"><span>0 [s]</span></div>
+                    <div class="custom-options-container" id="m-custom-options"></div>
+                </div>
+            </div>
+
+            <!-- Electron Spin -->
+            <div class="control-group">
+                <label>Electron Spin (s) <span class="val" id="s-val">+1/2</span></label>
+                <div class="custom-select-wrapper" id="s-custom-select">
+                    <div class="custom-select-trigger"><span>+1/2 (Spin Up ↑)</span></div>
+                    <div class="custom-options-container">
+                        <div class="custom-option selected" data-value="0.5">+1/2 (Spin Up ↑)</div>
+                        <div class="custom-option" data-value="-0.5">-1/2 (Spin Down ↓)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Educational Topology Card -->
+            <div class="edu-card">
+                <h2>Quantum Topology & Nodes</h2>
+                <div class="edu-row">
+                    <span>Orbital Identity:</span>
+                    <span id="orbital-name" class="edu-val-right" style="color: #58a6ff; font-weight: bold;">1s</span>
+                </div>
+                <div class="edu-row">
+                    <span>Spatial Alignment:</span>
+                    <span id="orbital-axis-alignment" class="edu-val-right" style="color: #7ee787;">s</span>
+                </div>
+                <div class="edu-row">
+                    <span>Radial Nodes:</span>
+                    <span class="node-badge" id="radial-nodes">n - l - 1 = 0</span>
+                </div>
+                <div class="edu-row">
+                    <span>Angular Nodes:</span>
+                    <span class="node-badge" id="angular-nodes">l = 0</span>
+                </div>
+                <div class="edu-row">
+                    <span>Total Nodal Surfaces:</span>
+                    <span class="node-badge" id="total-nodes">n - 1 = 0</span>
+                </div>
+                <div class="edu-row">
+                    <span>Subshell Degeneracy:</span>
+                    <span class="node-badge" id="degeneracy-val">2l + 1 = 1 state</span>
+                </div>
+                
+                <div class="phase-legend">
+                    <div><span class="phase-dot" style="background: #38a6ff;"></span>Positive Phase (+ψ)</div>
+                    <div><span class="phase-dot" style="background: #ff5252;"></span>Negative Phase (-ψ)</div>
+                </div>
+
+                <div class="math-box" id="wave-math-repr">
+                    ψ₁₀₀(r,θ,φ) = R₁₀(r) · Y₀⁰(θ,φ)
+                </div>
+            </div>
+
+            <!-- Gizmo Visibility Dropdown -->
+            <div class="control-group">
+                <label>Viewport Gizmos <span class="val" id="gizmo-val">On</span></label>
+                <div class="custom-select-wrapper" id="gizmo-custom-select">
+                    <div class="custom-select-trigger"><span>On (Axes & Grid)</span></div>
+                    <div class="custom-options-container">
+                        <div class="custom-option selected" data-value="on">On (Axes & Grid)</div>
+                        <div class="custom-option" data-value="axes">Axes Only (X, Y, Z)</div>
+                        <div class="custom-option" data-value="grid">Grid Only</div>
+                        <div class="custom-option" data-value="off">Off (Hide All)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Camera Viewport</label>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-reset" id="reset-pan-btn" style="flex-grow: 1; padding: 7px 10px;" title="Reset view offset to origin">
+                        🎯 Recenter Pan (Origin)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Slice Controls -->
+            <div class="control-group">
+                <label>Nodal Cut-Plane (+ve)</label>
+                <div class="custom-select-wrapper" id="pos-slice-select">
+                    <div class="custom-select-trigger"><span>None (Full Cloud)</span></div>
+                    <div class="custom-options-container">
+                        <div class="custom-option selected" data-value="none">None (Full Cloud)</div>
+                        <div class="custom-option" data-value="x">+X Transverse Cut</div>
+                        <div class="custom-option" data-value="y">+Y Sagittal Cut</div>
+                        <div class="custom-option" data-value="z">+Z Coronal Cut</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="pos-slice-offset">Slice Depth Offset <span class="val" id="pos-slice-val">0.0 a₀</span></label>
+                <div class="slider-row">
+                    <input type="range" id="pos-slice-offset" min="-30" max="30" step="0.5" value="0.0">
+                    <button class="btn-reset" id="reset-pos-slice" title="Reset to 0.0 a₀">Reset</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Nodal Cut-Plane (-ve)</label>
+                <div class="custom-select-wrapper" id="neg-slice-select">
+                    <div class="custom-select-trigger"><span>None (Full Cloud)</span></div>
+                    <div class="custom-options-container">
+                        <div class="custom-option selected" data-value="none">None (Full Cloud)</div>
+                        <div class="custom-option" data-value="x">-X Transverse Cut</div>
+                        <div class="custom-option" data-value="y">-Y Sagittal Cut</div>
+                        <div class="custom-option" data-value="z">-Z Coronal Cut</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="neg-slice-offset">Slice Depth Offset <span class="val" id="neg-slice-val">0.0 a₀</span></label>
+                <div class="slider-row">
+                    <input type="range" id="neg-slice-offset" min="-30" max="30" step="0.5" value="0.0">
+                    <button class="btn-reset" id="reset-neg-slice" title="Reset to 0.0 a₀">Reset</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="step-trans-slider">Shell Transmission Multiplier <span class="val" id="step-trans-val">1.05x</span></label>
+                <div class="slider-row">
+                    <input type="range" id="step-trans-slider" min="1.00" max="1.50" step="0.01" value="1.05">
+                    <button class="btn-reset" id="reset-step-trans" title="Reset to 1.05x">Reset</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="gamma-slider">Luminance Gamma <span class="val" id="gamma-val">1.1</span></label>
+                <div class="slider-row">
+                    <input type="range" id="gamma-slider" min="0.2" max="3.0" step="0.1" value="1.1">
+                    <button class="btn-reset" id="reset-gamma" title="Reset to 1.1">Reset</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="point-count">Sampled Quantum Density <span class="val" id="points-val">30,000</span></label>
+                <div class="slider-row">
+                    <input type="range" id="point-count" min="8000" max="60000" step="2000" value="30000">
+                    <button class="btn-reset" id="reset-point-count" title="Reset to 30,000">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
